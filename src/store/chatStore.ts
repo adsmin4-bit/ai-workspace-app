@@ -7,7 +7,7 @@ interface ChatState {
   sessions: ChatSession[]
   currentSession: ChatSession | null
   messages: Message[]
-  
+
   // Actions
   createNewSession: (title: string, systemPrompt?: string) => Promise<void>
   loadSession: (sessionId: string) => void
@@ -43,11 +43,22 @@ export const useChatStore = create<ChatState>()(
 
         // Save to database
         try {
-          await fetch('/api/chat/sessions', {
+          const response = await fetch('/api/chat/sessions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, systemPrompt }),
           })
+
+          if (response.ok) {
+            const result = await response.json()
+            // Update the session with the database ID
+            set((state) => ({
+              sessions: state.sessions.map(s =>
+                s.id === newSession.id ? { ...s, id: result.session.id } : s
+              ),
+              currentSession: { ...newSession, id: result.session.id },
+            }))
+          }
         } catch (error) {
           console.error('Failed to save session:', error)
         }
@@ -85,14 +96,14 @@ export const useChatStore = create<ChatState>()(
       addMessage: (message: Message) => {
         set((state) => {
           const newMessages = [...state.messages, message]
-          
+
           // Update current session
           const updatedSession = state.currentSession
             ? {
-                ...state.currentSession,
-                messages: newMessages,
-                updatedAt: new Date(),
-              }
+              ...state.currentSession,
+              messages: newMessages,
+              updatedAt: new Date(),
+            }
             : null
 
           // Update sessions list

@@ -13,10 +13,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Generate a proper UUID for the message if sessionId is not a UUID
-    const messageId = sessionId.includes('-') ? sessionId : uuidv4()
-    
-    const message = await db.addMessage(messageId, role, content, metadata)
+    // Use the sessionId directly as the chat_session_id
+    const message = await db.addMessage(sessionId, role, content, metadata)
     return NextResponse.json({ success: true, message })
   } catch (error) {
     console.error('Add message error:', error)
