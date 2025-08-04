@@ -13,6 +13,14 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Validate that sessionId is a proper UUID
+    if (!sessionId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      return NextResponse.json(
+        { error: 'Invalid session ID format' },
+        { status: 400 }
+      )
+    }
+
     // Use the sessionId directly as the chat_session_id
     const message = await db.addMessage(sessionId, role, content, metadata)
     return NextResponse.json({ success: true, message })

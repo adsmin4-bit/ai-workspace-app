@@ -16,6 +16,7 @@ interface ChatState {
   addMessage: (message: Message) => void
   clearMessages: () => void
   setCurrentSession: (session: ChatSession | null) => void
+  clearInvalidSessions: () => void
 }
 
 export const useChatStore = create<ChatState>()(
@@ -26,22 +27,7 @@ export const useChatStore = create<ChatState>()(
       messages: [],
 
       createNewSession: async (title: string, systemPrompt?: string) => {
-        const newSession: ChatSession = {
-          id: uuidv4(),
-          title,
-          messages: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          systemPrompt,
-        }
-
-        set((state) => ({
-          sessions: [newSession, ...state.sessions],
-          currentSession: newSession,
-          messages: [],
-        }))
-
-        // Save to database
+        // Create session in database first
         try {
           const response = await fetch('/api/chat/sessions', {
             method: 'POST',
@@ -51,13 +37,22 @@ export const useChatStore = create<ChatState>()(
 
           if (response.ok) {
             const result = await response.json()
-            // Update the session with the database ID
+            const newSession: ChatSession = {
+              id: result.session.id, // Use the database-generated UUID
+              title,
+              messages: [],
+              createdAt: new Date(result.session.created_at),
+              updatedAt: new Date(result.session.updated_at),
+              systemPrompt,
+            }
+
             set((state) => ({
-              sessions: state.sessions.map(s =>
-                s.id === newSession.id ? { ...s, id: result.session.id } : s
-              ),
-              currentSession: { ...newSession, id: result.session.id },
+              sessions: [newSession, ...state.sessions],
+              currentSession: newSession,
+              messages: [],
             }))
+          } else {
+            console.error('Failed to create session in database')
           }
         } catch (error) {
           console.error('Failed to save session:', error)
@@ -146,6 +141,14 @@ export const useChatStore = create<ChatState>()(
           currentSession: session,
           messages: session?.messages || [],
         })
+      },
+
+      clearInvalidSessions: () => {
+        set((state) => ({
+          sessions: state.sessions.filter(session =>
+            session.id.length === 36 && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(session.id)
+          ),
+        }))
       },
     }),
     {
