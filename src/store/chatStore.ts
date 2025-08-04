@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { Message, ChatSession } from '@/types'
+import { v4 as uuidv4 } from 'uuid'
 
 interface ChatState {
   sessions: ChatSession[]
@@ -26,7 +27,7 @@ export const useChatStore = create<ChatState>()(
 
       createNewSession: async (title: string, systemPrompt?: string) => {
         const newSession: ChatSession = {
-          id: Date.now().toString(),
+          id: uuidv4(),
           title,
           messages: [],
           createdAt: new Date(),

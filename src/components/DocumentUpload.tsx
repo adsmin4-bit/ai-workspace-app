@@ -187,6 +187,8 @@ export default function DocumentUpload({}: DocumentUploadProps) {
                 <button
                   onClick={() => removeUpload(upload.id)}
                   className="text-gray-400 hover:text-gray-600"
+                  aria-label="Remove upload"
+                  title="Remove upload"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -254,6 +256,8 @@ export default function DocumentUpload({}: DocumentUploadProps) {
                       <button
                         onClick={() => removeDocument(document.id)}
                         className="text-gray-400 hover:text-red-500 transition-colors"
+                        aria-label="Remove document"
+                        title="Remove document"
                       >
                         <X className="w-4 h-4" />
                       </button>

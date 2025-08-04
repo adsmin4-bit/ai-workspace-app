@@ -46,6 +46,7 @@ export default function SettingsPanel() {
                       checked={provider.enabled}
                       onChange={(e) => updateProvider(provider.id, { enabled: e.target.checked })}
                       className="sr-only peer"
+                      aria-label={`Enable ${provider.name}`}
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
                   </label>
@@ -87,6 +88,7 @@ export default function SettingsPanel() {
                         className="input-field"
                         value={provider.models[0] || ''}
                         onChange={(e) => updateProvider(provider.id, { models: [e.target.value] })}
+                        aria-label="Select default model"
                       >
                         {provider.models.map(model => (
                           <option key={model} value={model}>
@@ -115,6 +117,7 @@ export default function SettingsPanel() {
                 className="input-field"
                 value={settings.defaultProvider}
                 onChange={(e) => updateSettings({ defaultProvider: e.target.value })}
+                aria-label="Select default provider"
               >
                 {providers.filter(p => p.enabled).map(provider => 
                   provider.models.map(model => (
@@ -138,6 +141,7 @@ export default function SettingsPanel() {
                 value={settings.temperature}
                 onChange={(e) => updateSettings({ temperature: parseFloat(e.target.value) })}
                 className="w-full"
+                aria-label="Temperature setting"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>Focused</span>
@@ -157,6 +161,7 @@ export default function SettingsPanel() {
                 value={settings.maxTokens}
                 onChange={(e) => updateSettings({ maxTokens: parseInt(e.target.value) })}
                 className="input-field"
+                aria-label="Maximum tokens"
               />
             </div>
 
@@ -170,6 +175,7 @@ export default function SettingsPanel() {
                   checked={settings.enableStreaming}
                   onChange={(e) => updateSettings({ enableStreaming: e.target.checked })}
                   className="sr-only peer"
+                  aria-label="Enable streaming"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
               </label>

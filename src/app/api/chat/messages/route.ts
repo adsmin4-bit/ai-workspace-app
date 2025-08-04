@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/supabase'
+import { v4 as uuidv4 } from 'uuid'
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,7 +13,10 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const message = await db.addMessage(sessionId, role, content, metadata)
+    // Generate a proper UUID for the message if sessionId is not a UUID
+    const messageId = sessionId.includes('-') ? sessionId : uuidv4()
+    
+    const message = await db.addMessage(messageId, role, content, metadata)
     return NextResponse.json({ success: true, message })
   } catch (error) {
     console.error('Add message error:', error)
