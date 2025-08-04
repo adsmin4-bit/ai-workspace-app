@@ -116,11 +116,13 @@ export default function SettingsPanel() {
                 value={settings.defaultProvider}
                 onChange={(e) => updateSettings({ defaultProvider: e.target.value })}
               >
-                {providers.filter(p => p.enabled).map(provider => (
-                  <option key={provider.id} value={provider.id}>
-                    {provider.name}
-                  </option>
-                ))}
+                {providers.filter(p => p.enabled).map(provider => 
+                  provider.models.map(model => (
+                    <option key={model} value={model}>
+                      {provider.name} - {model}
+                    </option>
+                  ))
+                ).flat()}
               </select>
             </div>
 

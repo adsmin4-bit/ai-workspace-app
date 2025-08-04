@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { OpenAIStream, StreamingTextResponse } from 'ai'
 import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
-import { ChatOpenAI } from 'langchain/chat_models/openai'
-import { ChatAnthropic } from 'langchain/chat_models/anthropic'
-import { HumanMessage, SystemMessage } from 'langchain/schema'
 import { db } from '@/lib/supabase'
 
 // Initialize AI clients
@@ -27,11 +24,14 @@ export async function POST(req: NextRequest) {
     // Get provider from model
     const provider = model?.startsWith('gpt') ? 'openai' : 
                    model?.startsWith('claude') ? 'anthropic' : 'openai'
+    
+    // Ensure we have a valid model name
+    const modelName = model || 'gpt-3.5-turbo'
 
     // Create streaming response based on provider
     if (provider === 'openai') {
       const response = await openai.chat.completions.create({
-        model: model || 'gpt-3.5-turbo',
+        model: modelName,
         messages: [
           { role: 'system', content: systemPrompt || 'You are a helpful AI assistant.' },
           { role: 'user', content: message }
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
     if (provider === 'anthropic') {
       const response = await anthropic.messages.create({
-        model: model || 'claude-3-haiku-20240307',
+        model: modelName,
         max_tokens: maxTokens || 2000,
         temperature: temperature || 0.7,
         system: systemPrompt || 'You are a helpful AI assistant.',

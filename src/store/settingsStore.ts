@@ -17,7 +17,7 @@ interface SettingsState {
 }
 
 const defaultSettings: AppSettings = {
-  defaultProvider: 'openai',
+  defaultProvider: 'gpt-3.5-turbo',
   systemPrompt: 'You are a helpful AI assistant. You help users with their questions and tasks.',
   maxTokens: 2000,
   temperature: 0.7,
