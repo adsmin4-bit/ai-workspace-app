@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Send, Bot, User, Settings, FileText, Sparkles } from 'lucide-react'
+import { Send, Bot, User, Settings, FileText, Sparkles, MessageSquare } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -168,9 +168,10 @@ export default function ChatInterface({}: ChatInterfaceProps) {
         {message.role === 'assistant' ? (
           <ReactMarkdown
             components={{
-              code({ node, inline, className, children, ...props }) {
+              code({ className, children, ...props }: any) {
                 const match = /language-(\w+)/.exec(className || '')
-                return !inline && match ? (
+                const isInline = !match
+                return !isInline ? (
                   <SyntaxHighlighter
                     style={tomorrow}
                     language={match[1]}
@@ -246,9 +247,10 @@ export default function ChatInterface({}: ChatInterfaceProps) {
               <div className="max-w-[80%] rounded-lg p-4 bg-gray-100 text-gray-900">
                 <ReactMarkdown
                   components={{
-                    code({ node, inline, className, children, ...props }) {
+                    code({ className, children, ...props }: any) {
                       const match = /language-(\w+)/.exec(className || '')
-                      return !inline && match ? (
+                      const isInline = !match
+                      return !isInline ? (
                         <SyntaxHighlighter
                           style={tomorrow}
                           language={match[1]}
