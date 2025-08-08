@@ -53,7 +53,7 @@ export default function WebSourcesPanel() {
     if (topic.trim() && !isFindingUrls) {
       setIsFindingUrls(true)
       try {
-        const response = await fetch('/api/sources/find-urls', {
+        const response = await fetch('/api/sources/topic-to-urls', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ topic: topic.trim() }),
@@ -210,15 +210,16 @@ export default function WebSourcesPanel() {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* Find URLs by Topic Section */}
         <div className="card">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">🔍 Find URLs by Topic</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">🔍 Bulk URL Gathering</h3>
           <p className="text-sm text-gray-600 mb-4">
-            Search for URLs related to a topic and save them to your database for future reference.
+            Enter a topic to automatically gather 15-20 relevant URLs from DuckDuckGo, Wikipedia, and other sources.
+            URLs are automatically saved to your database and integrated with the chat system.
           </p>
 
           <div className="flex space-x-2">
             <input
               type="text"
-              placeholder="Enter a topic (e.g., 'artificial intelligence', 'machine learning')..."
+              placeholder="Enter a topic (e.g., 'artificial intelligence', 'machine learning', 'climate change')..."
               className="input-field flex-1"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
@@ -234,9 +235,20 @@ export default function WebSourcesPanel() {
               ) : (
                 <Search className="w-4 h-4" />
               )}
-              <span>{isFindingUrls ? 'Finding URLs...' : '🔍 Find URLs'}</span>
+              <span>{isFindingUrls ? 'Gathering URLs...' : '🚀 Gather URLs'}</span>
             </button>
           </div>
+
+          {isFindingUrls && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                <span className="text-sm text-blue-700">
+                  Searching DuckDuckGo, Wikipedia, and other sources for relevant URLs...
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Search Web Sources Section */}
@@ -266,8 +278,11 @@ export default function WebSourcesPanel() {
         {/* Saved URLs Section */}
         <div className="card">
           <h3 className="text-lg font-medium text-gray-900 mb-4">
-            Saved URLs by Topic ({Object.keys(savedUrls).length} topics)
+            📚 Saved URLs by Topic ({Object.keys(savedUrls).length} topics)
           </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            URLs gathered from bulk search are automatically saved and integrated with your AI chat system.
+          </p>
 
           {isLoadingUrls ? (
             <div className="flex items-center justify-center py-8">
