@@ -3,13 +3,13 @@ import { db } from '@/lib/supabase'
 
 export async function POST(req: NextRequest) {
   try {
-    const { title, systemPrompt } = await req.json()
+    const { title, systemPrompt, selectedFolders, includeAllSources } = await req.json()
 
     if (!title) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 })
     }
 
-    const session = await db.createChatSession(title, systemPrompt)
+    const session = await db.createChatSession(title, systemPrompt, selectedFolders, includeAllSources)
     return NextResponse.json({ success: true, session })
   } catch (error) {
     console.error('Create session error:', error)

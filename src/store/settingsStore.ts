@@ -4,12 +4,10 @@ import { AppSettings, AIProvider } from '@/types'
 
 interface SettingsState {
   settings: AppSettings
-  systemPrompt: string
   providers: AIProvider[]
-  
+
   // Actions
   updateSettings: (settings: Partial<AppSettings>) => void
-  setSystemPrompt: (prompt: string) => void
   addProvider: (provider: AIProvider) => void
   updateProvider: (id: string, updates: Partial<AIProvider>) => void
   removeProvider: (id: string) => void
@@ -18,7 +16,7 @@ interface SettingsState {
 
 const defaultSettings: AppSettings = {
   defaultProvider: 'gpt-3.5-turbo',
-  systemPrompt: 'You are a helpful AI assistant. You help users with their questions and tasks.',
+  systemPrompt: 'You are an AI manager. You help users with their questions and tasks.',
   maxTokens: 2000,
   temperature: 0.7,
   enableStreaming: true,
@@ -54,7 +52,6 @@ export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
       settings: defaultSettings,
-      systemPrompt: defaultSettings.systemPrompt,
       providers: defaultProviders,
 
       updateSettings: (newSettings: Partial<AppSettings>) => {
@@ -63,9 +60,7 @@ export const useSettingsStore = create<SettingsState>()(
         }))
       },
 
-      setSystemPrompt: (prompt: string) => {
-        set({ systemPrompt: prompt })
-      },
+
 
       addProvider: (provider: AIProvider) => {
         set((state) => ({
@@ -97,7 +92,6 @@ export const useSettingsStore = create<SettingsState>()(
       name: 'settings-storage',
       partialize: (state) => ({
         settings: state.settings,
-        systemPrompt: state.systemPrompt,
         providers: state.providers,
       }),
     }

@@ -8,6 +8,8 @@ export interface Message {
     sources?: string[]
     model?: string
     tokens?: number
+    contextChunks?: ContextChunk[]
+    similarityScores?: { [sourceId: string]: number }
   }
 }
 
@@ -18,6 +20,20 @@ export interface ChatSession {
   createdAt: Date
   updatedAt: Date
   systemPrompt?: string
+  selectedFolders?: string[] // Array of folder IDs for this session
+  includeAllSources?: boolean // Whether to include all sources or only selected folders
+}
+
+export interface Folder {
+  id: string
+  name: string
+  type: 'urls' | 'documents' | 'notes' | 'mixed'
+  description?: string
+  color: string
+  includeInContext: boolean
+  createdAt: Date
+  updatedAt: Date
+  itemCount?: number
 }
 
 // Document Types
@@ -26,10 +42,14 @@ export interface Document {
   name: string
   type: 'pdf' | 'docx' | 'txt'
   size: number
-  uploadedAt: Date
+  uploadedAt: string | Date
   processed: boolean
   content?: string
   embeddings?: number[]
+  folderId?: string
+  includeInMemory?: boolean // Toggle for AI memory inclusion
+  contextWeight?: number // Context weight (0-100)
+  tags?: string[] // Auto-generated topic tags
   metadata?: {
     pages?: number
     author?: string
@@ -93,6 +113,19 @@ export interface WebSource {
   }
 }
 
+// Source URL Types
+export interface SourceUrl {
+  id: string
+  topic: string
+  url: string
+  title?: string
+  folderId?: string
+  includeInMemory?: boolean // Toggle for AI memory inclusion
+  contextWeight?: number // Context weight (0-100)
+  tags?: string[] // Auto-generated topic tags
+  createdAt: string | Date
+}
+
 // YouTube Types
 export interface YouTubeVideo {
   id: string
@@ -103,6 +136,7 @@ export interface YouTubeVideo {
   duration: number
   uploadedAt: Date
   processedAt: Date
+  tags?: string[] // Auto-generated topic tags
 }
 
 // Notebook Types
@@ -112,10 +146,37 @@ export interface NotebookEntry {
   content: string
   type: 'note' | 'summary' | 'idea' | 'task'
   tags: string[]
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string | Date
+  updatedAt: string | Date
   relatedChatId?: string
   relatedDocumentId?: string
+  folderId?: string
+  includeInMemory?: boolean // Toggle for AI memory inclusion
+  contextWeight?: number // Context weight (0-100)
+  metadata?: {
+    source?: string
+    session_id?: string
+    user_message?: string
+    timestamp?: string
+    auto_saved?: boolean
+  }
+}
+
+// NEW: Summary interface for AI-generated summaries
+export interface Summary {
+  id: string
+  sourceId: string
+  sourceType: 'document' | 'url' | 'youtube' | 'notebook'
+  summary: string
+  wordCount?: number
+  generatedAt: Date
+  modelUsed?: string
+  metadata?: {
+    source_title?: string
+    source_url?: string
+    generation_time?: number
+    [key: string]: any
+  }
 }
 
 // Settings Types
@@ -139,9 +200,18 @@ export interface APIResponse<T = any> {
 
 // Chat Stream Types
 export interface ChatStreamChunk {
-  type: 'content' | 'done' | 'error'
+  type: 'content' | 'done' | 'error' | 'metadata'
   content?: string
   error?: string
+  metadata?: {
+    usedSources: string[]
+    contextChunkCount: number
+    contextChunks: ContextChunk[]
+    selectedFolders: string[]
+    includeAllSources: boolean
+    folderFiltered: boolean
+    similarityScores?: { [sourceId: string]: number }
+  }
 }
 
 // File Upload Types
@@ -164,4 +234,146 @@ export interface AIAgent {
   createdAt: Date
   updatedAt: Date
   enabled: boolean
+}
+
+export interface FolderWithItems extends Folder {
+  documents?: Document[]
+  urls?: SourceUrl[]
+  notes?: NotebookEntry[]
+}
+
+export interface SelectedFolders {
+  [folderId: string]: boolean
+}
+
+// RAG Context Chunks
+export interface ContextChunk {
+  id: string
+  content: string
+  metadata?: {
+    document_id?: string
+    url_id?: string
+    notebook_id?: string
+    source_type?: 'document' | 'url' | 'notebook' | 'chat'
+    title?: string
+    url?: string
+    tags?: string[]
+    created_at?: string
+    folder_id?: string
+    include_in_memory?: boolean
+    context_weight?: number
+    [key: string]: any
+  }
+  embedding?: number[]
+  similarity?: number
+  contextWeight?: number
+  folderName?: string
+  createdAt: string | Date
+}
+
+export interface ContextSearchResult {
+  id: string
+  content: string
+  metadata?: ContextChunk['metadata']
+  similarity: number
+  contextWeight: number
+  folderName?: string
+}
+
+export interface ContextSearchRequest {
+  prompt: string
+  limit?: number
+  threshold?: number
+  sourceTypes?: string[]
+  selectedFolders?: string[]
+  includeAllSources?: boolean
+}
+
+export interface ContextSearchResponse {
+  success: boolean
+  data?: ContextSearchResult[]
+  error?: string
+}
+
+// New interfaces for folder picker and memory controls
+export interface FolderPickerProps {
+  isOpen: boolean
+  onClose: () => void
+  onConfirm: (selectedFolders: string[], includeAllSources: boolean) => void
+  currentSelection?: {
+    selectedFolders: string[]
+    includeAllSources: boolean
+  }
+}
+
+export interface MemoryToggleProps {
+  itemId: string
+  itemType: 'document' | 'notebook' | 'url'
+  isEnabled: boolean
+  onToggle: (enabled: boolean) => void
+  size?: 'sm' | 'md' | 'lg'
+}
+
+// NEW: Summary generation props
+export interface SummaryGeneratorProps {
+  sourceId: string
+  sourceType: 'document' | 'url' | 'youtube' | 'notebook'
+  sourceTitle: string
+  sourceContent: string
+  onSummaryGenerated?: (summary: Summary) => void
+  size?: 'sm' | 'md' | 'lg'
+}
+
+// NEW: Context viewer props
+export interface ContextViewerProps {
+  isOpen: boolean
+  onClose: () => void
+  contextChunks: ContextChunk[]
+  sources: {
+    documents: Document[]
+    urls: SourceUrl[]
+    notebook: NotebookEntry[]
+  }
+  similarityScores?: { [sourceId: string]: number }
+}
+
+export interface ChatSessionConfig {
+  selectedFolders: string[]
+  includeAllSources: boolean
+  systemPrompt?: string
+}
+
+export interface SourceItem {
+  id: string
+  type: 'document' | 'url' | 'notebook'
+  title: string
+  content?: string
+  includeInMemory: boolean
+  contextWeight: number
+  folderId?: string
+  folderName?: string
+  tags?: string[]
+  createdAt: string | Date
+}
+
+export interface FolderManagerProps {
+  isOpen: boolean
+  onClose: () => void
+  onFolderCreated?: (folder: Folder) => void
+  onFolderUpdated?: (folder: Folder) => void
+  onFolderDeleted?: (folderId: string) => void
+}
+
+export interface DragDropContext {
+  draggedItem?: SourceItem
+  targetFolder?: Folder
+  isDragging: boolean
+}
+
+export interface ContextWeightSliderProps {
+  itemId: string
+  itemType: 'document' | 'notebook' | 'url'
+  weight: number
+  onWeightChange: (weight: number) => void
+  size?: 'sm' | 'md' | 'lg'
 } 

@@ -2,13 +2,13 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { Toaster } from 'react-hot-toast'
+import { AuthProvider } from '@/components/AuthProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'AI Workspace - Your Local AI Assistant',
-  description: 'A comprehensive AI workspace for chat, document processing, and workflow automation',
-  keywords: 'AI, chatbot, document processing, workflow automation, local AI',
+  title: 'AI Workspace App',
+  description: 'Local-first AI workspace combining chat, document processing, and workflow automation',
 }
 
 export default function RootLayout({
@@ -19,19 +19,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <div className="min-h-screen bg-gray-50">
+        <AuthProvider>
           {children}
-        </div>
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-          }}
-        />
+          <Toaster position="top-right" />
+        </AuthProvider>
       </body>
     </html>
   )

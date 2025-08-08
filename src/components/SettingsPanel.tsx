@@ -31,7 +31,7 @@ export default function SettingsPanel() {
         {/* AI Providers */}
         <div className="card">
           <h3 className="text-lg font-medium text-gray-900 mb-4">AI Providers</h3>
-          
+
           <div className="space-y-4">
             {providers.map(provider => (
               <div key={provider.id} className="border border-gray-200 rounded-lg p-4">
@@ -107,7 +107,7 @@ export default function SettingsPanel() {
         {/* Chat Settings */}
         <div className="card">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Chat Settings</h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -119,7 +119,7 @@ export default function SettingsPanel() {
                 onChange={(e) => updateSettings({ defaultProvider: e.target.value })}
                 aria-label="Select default provider"
               >
-                {providers.filter(p => p.enabled).map(provider => 
+                {providers.filter(p => p.enabled).map(provider =>
                   provider.models.map(model => (
                     <option key={model} value={model}>
                       {provider.name} - {model}
@@ -194,7 +194,7 @@ export default function SettingsPanel() {
             onChange={(e) => updateSettings({ systemPrompt: e.target.value })}
           />
           <p className="text-sm text-gray-500 mt-2">
-            This prompt defines the personality and behavior of your AI assistant.
+            This prompt defines the personality and behavior of your AI assistant. Current: "{settings.systemPrompt}"
           </p>
         </div>
 

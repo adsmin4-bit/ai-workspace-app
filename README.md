@@ -1,301 +1,190 @@
-# AI Workspace - Local-First AI Assistant
+# 🚀 AI Workspace App
 
-A comprehensive AI workspace application that combines features from LibreChat, AnythingLLM, and NotebookLM. Built with Next.js, Supabase, and LangChain for a modern, local-first AI experience.
+A comprehensive, local-first AI workspace that combines chat, document processing, and workflow automation with advanced RAG (Retrieval-Augmented Generation) capabilities.
 
-## 🚀 Features
+## ✨ Features
 
-### Core Features
-- **AI Chat Interface** - Multi-provider support (OpenAI, Claude, Mistral) with streaming responses
-- **Document Processing** - Upload and chat with PDF, DOCX, and TXT files
-- **Notebook Memory** - Save chats, AI notes, and summaries to Supabase
-- **Workflow Automation** - Quick action buttons for common tasks
-- **Web Sources** - Search and analyze web content
-- **YouTube Integration** - Transcribe and process YouTube videos
-- **System Prompt Editor** - Customize AI personality and behavior
+### 🤖 AI Chat with Memory
+- **Context-aware conversations** using your documents and notes
+- **Real-time streaming responses** from OpenAI, Claude, and Mistral
+- **Session management** with conversation history
+- **Folder-based context filtering** for focused conversations
 
-### Technical Features
-- **Local-First Architecture** - Works completely locally with optional cloud deployment
-- **Real-time Streaming** - Instant AI responses with streaming support
-- **Secure API Management** - Encrypted API key storage
-- **Modern UI/UX** - Clean, responsive interface built with Tailwind CSS
-- **TypeScript Support** - Full type safety throughout the application
-- **Modular Design** - Easy to extend and customize
+### 📄 Document Processing
+- **Multi-format support**: PDF, DOCX, TXT files
+- **Automatic text extraction** and processing
+- **Vector embeddings** for semantic search
+- **Auto-tagging** with AI-generated topics
+- **Summary generation** for long documents
 
-## 🛠️ Tech Stack
+### 📝 Smart Notebook
+- **Auto-save** functionality
+- **AI-powered autocomplete** suggestions
+- **Multiple entry types**: notes, summaries, ideas, tasks
+- **Link to chats and documents**
+- **Include in AI memory** toggle
 
-- **Frontend**: Next.js 14, React 18, TypeScript
-- **Styling**: Tailwind CSS, Framer Motion
-- **Backend**: Next.js API Routes, LangChain.js
-- **Database**: Supabase (PostgreSQL with pgvector)
-- **AI Providers**: OpenAI, Anthropic (Claude), Mistral
-- **State Management**: Zustand
-- **File Processing**: PDF.js, Mammoth.js
-- **UI Components**: Lucide React, React Markdown
+### 🌐 Web Integration
+- **Web search** with DuckDuckGo API
+- **URL saving** and content processing
+- **YouTube video transcription**
+- **Automatic content indexing**
 
-## 📋 Prerequisites
+### 🗂️ Organization
+- **Folder system** for content organization
+- **Memory management** with individual toggles
+- **Context viewer** to see AI reasoning
+- **Advanced filtering** and search
 
-Before you begin, ensure you have the following installed:
-- Node.js 18+ and npm
-- Git
-- A Supabase account (free tier works)
-- API keys for your preferred AI providers
+### 🤖 AI Agents
+- **Custom AI agents** with specific capabilities and personalities
+- **Capability-based access** to different tools and features
+- **Real-time agent chat** with streaming responses
+- **Agent management** with CRUD operations
+- **System prompt configuration** for agent behavior
 
 ## 🚀 Quick Start
 
 ### 1. Clone and Install
-
 ```bash
-# Clone the repository
 git clone <your-repo-url>
-cd ai-workspace-app
-
-# Install dependencies
+cd app2
 npm install
 ```
 
-### 2. Set Up Supabase
-
-1. Create a new project at [supabase.com](https://supabase.com)
-2. Get your project URL and anon key from the project settings
-3. Create the following tables in your Supabase database:
-
-```sql
--- Chat sessions table
-CREATE TABLE chat_sessions (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  title TEXT NOT NULL,
-  system_prompt TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Messages table
-CREATE TABLE messages (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  chat_session_id UUID REFERENCES chat_sessions(id) ON DELETE CASCADE,
-  role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
-  content TEXT NOT NULL,
-  metadata JSONB,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Documents table
-CREATE TABLE documents (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('pdf', 'docx', 'txt')),
-  size INTEGER NOT NULL,
-  content TEXT,
-  embeddings VECTOR(1536),
-  metadata JSONB,
-  processed BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Notebook entries table
-CREATE TABLE notebook_entries (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  title TEXT NOT NULL,
-  content TEXT NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('note', 'summary', 'idea', 'task')),
-  tags TEXT[],
-  related_chat_id UUID REFERENCES chat_sessions(id),
-  related_document_id UUID REFERENCES documents(id),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Settings table
-CREATE TABLE settings (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  key TEXT UNIQUE NOT NULL,
-  value JSONB,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Enable pgvector extension
-CREATE EXTENSION IF NOT EXISTS vector;
-```
-
-### 3. Configure Environment Variables
-
-Copy the example environment file and fill in your values:
-
+### 2. Environment Setup
 ```bash
-cp env.example .env.local
+npm run setup
 ```
+This will create a `.env.local` file with placeholder values.
 
-Edit `.env.local` with your configuration:
-
-```env
-# Supabase Configuration
+### 3. Configure API Keys
+Edit `.env.local` and add your API keys:
+```bash
+# Required
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-
-# OpenAI Configuration
 OPENAI_API_KEY=your_openai_api_key
 
-# Anthropic Configuration (Claude)
+# Optional
 ANTHROPIC_API_KEY=your_anthropic_api_key
-
-# Mistral Configuration
 MISTRAL_API_KEY=your_mistral_api_key
-
-# YouTube API (for video transcription)
 YOUTUBE_API_KEY=your_youtube_api_key
-
-# Bing Search API (for web sources)
-BING_SEARCH_API_KEY=your_bing_search_api_key
 ```
 
-### 4. Run the Application
+### 4. Database Setup
+1. Create a Supabase project at [supabase.com](https://supabase.com)
+2. Run the SQL migration from `supabase-migration.sql`
+3. Add your Supabase credentials to `.env.local`
 
+### 5. Start Development
 ```bash
-# Start the development server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Visit [http://localhost:3000](http://localhost:3000) to use your AI workspace!
 
-## 📖 How to Use
+## 📚 Detailed Setup Guide
 
-### AI Chat
-1. Navigate to the "AI Chat" tab
-2. Enter your message in the input field
-3. The AI will respond with streaming text
-4. Chat history is automatically saved
+For comprehensive setup instructions, see [SETUP_COMPLETION.md](./SETUP_COMPLETION.md)
 
-### Document Processing
-1. Go to the "Documents" tab
-2. Drag and drop PDF, DOCX, or TXT files
-3. Files are automatically processed and indexed
-4. Ask questions about your documents in the chat
+## 🏗️ Architecture
 
-### Notebook
-1. Use the "Notebook" tab to save notes and ideas
-2. Create different types of entries (notes, summaries, tasks)
-3. Link entries to specific chats or documents
+### Frontend
+- **Next.js 14** with App Router
+- **TypeScript** for type safety
+- **Tailwind CSS** for styling
+- **Zustand** for state management
+- **React Hook Form** for forms
+- **Framer Motion** for animations
 
-### Workflows
-1. Access the "Workflows" tab for quick actions
-2. Use predefined workflows like "Summarize" or "Create Tweet"
-3. Customize workflows in the settings
+### Backend
+- **Next.js API Routes** for serverless functions
+- **Supabase** for database and authentication
+- **OpenAI API** for AI capabilities
+- **pgvector** for vector similarity search
+- **File processing** with PDF, DOCX, TXT support
 
-### Web Sources
-1. Enter a topic in the "Web Sources" tab
-2. The system will search for relevant web content
-3. Use the found sources as context for AI conversations
+### Database Schema
+- **Chat sessions** with message history
+- **Documents** with embeddings and metadata
+- **Notebook entries** with auto-save
+- **Web sources** and YouTube videos
+- **Context chunks** for RAG functionality
+- **Folders** for organization
+- **Settings** and configurations
 
-### YouTube Processing
-1. Paste a YouTube URL in the "YouTube" tab
-2. The system will transcribe the video
-3. Use the transcript for analysis or Q&A
+## 🎯 Usage Examples
 
-### Settings
-1. Configure your AI providers and API keys
-2. Customize the system prompt
-3. Adjust chat parameters (temperature, max tokens)
-4. Enable/disable features as needed
+### Chat with Document Context
+1. Upload documents in the **Documents** tab
+2. Go to **Chat** tab and ask questions
+3. AI will use your documents as context for responses
 
-## 🔧 API Routes
+### Create and Organize Notes
+1. Use the **Notebook** tab to create notes
+2. Organize content into folders
+3. Toggle memory inclusion for AI context
 
-The application includes several API routes for backend functionality:
+### Web Research
+1. Search for topics in **Web Sources**
+2. Save relevant URLs and content
+3. Use web content in AI conversations
 
-- `/api/chat` - Main chat endpoint with streaming support
-- `/api/documents/upload` - Document upload and processing
-- `/api/documents/[id]` - Document management
-- `/api/chat/sessions` - Chat session management
-- `/api/chat/messages` - Message storage
-- `/api/web/search` - Web source search
-- `/api/youtube/transcribe` - YouTube video transcription
+### YouTube Analysis
+1. Paste YouTube URLs in **YouTube** tab
+2. Get video transcripts and metadata
+3. Ask AI about video content
 
-## 🏗️ Project Structure
+## 🔧 Advanced Features
 
-```
-src/
-├── app/                    # Next.js app directory
-│   ├── api/               # API routes
-│   ├── globals.css        # Global styles
-│   ├── layout.tsx         # Root layout
-│   └── page.tsx           # Main page
-├── components/            # React components
-│   ├── ChatInterface.tsx  # Main chat component
-│   ├── DocumentUpload.tsx # Document upload
-│   ├── SettingsPanel.tsx  # Settings management
-│   └── ...               # Other components
-├── lib/                   # Utility libraries
-│   └── supabase.ts       # Supabase client
-├── store/                 # State management
-│   ├── chatStore.ts      # Chat state
-│   └── settingsStore.ts  # Settings state
-└── types/                 # TypeScript types
-    └── index.ts          # Type definitions
-```
+### RAG (Retrieval-Augmented Generation)
+- Automatic embedding generation for semantic search
+- Context-aware responses using your content
+- Folder-based filtering for focused conversations
 
-## 🚀 Deployment
+### Memory Management
+- Toggle individual items in/out of AI memory
+- Folder-based organization
+- Context viewer to see AI reasoning
 
-### Local Development
-The app runs locally by default. No additional setup required beyond the initial configuration.
+### Multi-Modal Support
+- Document processing (PDF, DOCX, TXT)
+- Web content scraping
+- YouTube video transcription
+- Note-taking with autocomplete
 
-### Vercel Deployment
-1. Push your code to GitHub
-2. Connect your repository to Vercel
-3. Add environment variables in Vercel dashboard
-4. Deploy automatically
+## 🚨 Troubleshooting
 
-### Railway Deployment
-1. Connect your GitHub repository to Railway
-2. Add environment variables
-3. Deploy with one click
+### Common Issues
+1. **"OpenAI API key not found"** - Check your `.env.local` file
+2. **"Supabase connection failed"** - Verify your database credentials
+3. **"No context found"** - Upload documents or create notes
+4. **"File upload failed"** - Check file size and type
 
-## 🔒 Security
+### Getting Help
+- Check browser console for errors
+- Review server logs in terminal
+- See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for detailed solutions
 
-- API keys are stored securely in environment variables
-- Supabase provides built-in security features
-- All API routes include proper validation
-- File uploads are sanitized and validated
+## 📄 License
+
+This project is licensed under the MIT License.
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+4. Submit a pull request
 
-## 📝 License
+## 🎉 What's Next?
 
-This project is licensed under the MIT License.
+Your AI workspace is ready to help you:
+- Build a comprehensive knowledge base
+- Automate document analysis
+- Create AI-powered workflows
+- Organize and search your content
+- Generate insights from your data
 
-## 🆘 Support
-
-If you encounter any issues:
-
-1. Check the console for error messages
-2. Verify your environment variables are set correctly
-3. Ensure your Supabase database is properly configured
-4. Check that your API keys are valid and have sufficient credits
-
-## 🔮 Future Features
-
-- [ ] Advanced workflow builder
-- [ ] Custom AI agent creation
-- [ ] Real-time collaboration
-- [ ] Advanced document analysis
-- [ ] Integration with more AI providers
-- [ ] Mobile app support
-- [ ] Advanced search and filtering
-- [ ] Export and backup functionality
-
-## 📚 Learning Resources
-
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Supabase Documentation](https://supabase.com/docs)
-- [LangChain.js Documentation](https://js.langchain.com/)
-- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
-
----
-
-Built with ❤️ using modern web technologies for a seamless AI experience. 
+Start exploring and enjoy the power of local-first AI assistance! 🚀 

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/supabase'
-import { v4 as uuidv4 } from 'uuid'
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,6 +22,30 @@ export async function POST(req: NextRequest) {
 
     // Use the sessionId directly as the chat_session_id
     const message = await db.addMessage(sessionId, role, content, metadata)
+
+    // NEW: Automatically save chat messages to RAG memory (only assistant responses)
+    if (role === 'assistant' && content && content.trim()) {
+      try {
+        const { saveChunksToMemory } = await import('@/lib/rag-utils')
+        await saveChunksToMemory({
+          sourceType: 'chat',
+          sourceId: message.id,
+          title: `Chat Response - Session ${sessionId}`,
+          fullText: content,
+          metadata: {
+            session_id: sessionId,
+            role: role,
+            created_at: message.created_at,
+            ...metadata
+          }
+        })
+        console.log('Chat message saved to RAG memory')
+      } catch (error) {
+        console.error('Error saving chat message to RAG memory:', error)
+        // Don't fail the message saving if RAG saving fails
+      }
+    }
+
     return NextResponse.json({ success: true, message })
   } catch (error) {
     console.error('Add message error:', error)

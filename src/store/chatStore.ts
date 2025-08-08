@@ -1,15 +1,24 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { Message, ChatSession } from '@/types'
-import { v4 as uuidv4 } from 'uuid'
+import { ChatSession, Message } from '@/types'
 
 interface ChatState {
   sessions: ChatSession[]
   currentSession: ChatSession | null
   messages: Message[]
 
+  // Memory Context Settings
+  useMemoryContext: boolean
+  memorySourceTypes: string[]
+  selectedSources: {
+    documents: boolean
+    urls: boolean
+    notebook: boolean
+  }
+  selectedFolders: string[] // New: selected folders for RAG filtering
+
   // Actions
-  createNewSession: (title: string, systemPrompt?: string) => Promise<void>
+  createNewSession: (title: string, systemPrompt?: string) => Promise<string>
   loadSession: (sessionId: string) => void
   deleteSession: (sessionId: string) => void
   updateSessionTitle: (sessionId: string, title: string) => void
@@ -17,6 +26,17 @@ interface ChatState {
   clearMessages: () => void
   setCurrentSession: (session: ChatSession | null) => void
   clearInvalidSessions: () => void
+
+  // Memory Context Actions
+  setUseMemoryContext: (use: boolean) => void
+  setMemorySourceTypes: (types: string[]) => void
+  setSelectedSources: (sources: { documents: boolean; urls: boolean; notebook: boolean }) => void
+  toggleMemorySourceType: (type: string) => void
+
+  // Folder Selection Actions
+  setSelectedFolders: (folders: string[]) => void
+  toggleFolder: (folderId: string) => void
+  clearSelectedFolders: () => void
 }
 
 export const useChatStore = create<ChatState>()(
@@ -26,19 +46,37 @@ export const useChatStore = create<ChatState>()(
       currentSession: null,
       messages: [],
 
+      // Memory Context Settings
+      useMemoryContext: true,
+      memorySourceTypes: ['document', 'url', 'notebook', 'chat'],
+      selectedSources: {
+        documents: true,
+        urls: true,
+        notebook: true
+      },
+      selectedFolders: [], // New: selected folders for RAG filtering
+
       createNewSession: async (title: string, systemPrompt?: string) => {
+        // Generate UUID for session ID using crypto.randomUUID()
+        const sessionId = crypto.randomUUID()
+
         // Create session in database first
         try {
+          console.log('Creating session with title:', title, 'ID:', sessionId)
           const response = await fetch('/api/chat/sessions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, systemPrompt }),
           })
 
+          console.log('Session creation response status:', response.status)
+
           if (response.ok) {
             const result = await response.json()
+            console.log('Session creation result:', result)
+
             const newSession: ChatSession = {
-              id: result.session.id, // Use the database-generated UUID
+              id: sessionId, // Use our generated UUID
               title,
               messages: [],
               createdAt: new Date(result.session.created_at),
@@ -51,21 +89,94 @@ export const useChatStore = create<ChatState>()(
               currentSession: newSession,
               messages: [],
             }))
+
+            console.log('Session created successfully with ID:', newSession.id)
+            return newSession.id
           } else {
-            console.error('Failed to create session in database')
+            const errorText = await response.text()
+            console.error('Failed to create session in database:', response.status, errorText)
+            // Create a temporary session with UUID as fallback
+            const tempSession: ChatSession = {
+              id: sessionId,
+              title,
+              messages: [],
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              systemPrompt,
+            }
+            set((state) => ({
+              sessions: [tempSession, ...state.sessions],
+              currentSession: tempSession,
+              messages: [],
+            }))
+            return tempSession.id
           }
         } catch (error) {
           console.error('Failed to save session:', error)
+          // Create a temporary session with UUID as fallback
+          const tempSession: ChatSession = {
+            id: sessionId,
+            title,
+            messages: [],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            systemPrompt,
+          }
+          set((state) => ({
+            sessions: [tempSession, ...state.sessions],
+            currentSession: tempSession,
+            messages: [],
+          }))
+          return tempSession.id
         }
       },
 
-      loadSession: (sessionId: string) => {
+      loadSession: async (sessionId: string) => {
         const session = get().sessions.find(s => s.id === sessionId)
         if (session) {
-          set({
-            currentSession: session,
-            messages: session.messages,
-          })
+          // Load messages from database
+          try {
+            const response = await fetch(`/api/chat/messages?sessionId=${sessionId}`)
+            if (response.ok) {
+              const result = await response.json()
+              const messages = result.messages || []
+
+              // Convert database messages to frontend format
+              const formattedMessages = messages.map((msg: any) => ({
+                id: msg.id,
+                role: msg.role,
+                content: msg.content,
+                timestamp: new Date(msg.created_at),
+                metadata: msg.metadata
+              }))
+
+              set({
+                currentSession: session,
+                messages: formattedMessages,
+              })
+
+              // Update session with loaded messages
+              set((state) => ({
+                sessions: state.sessions.map(s =>
+                  s.id === sessionId
+                    ? { ...s, messages: formattedMessages, updatedAt: new Date() }
+                    : s
+                ),
+              }))
+            } else {
+              console.error('Failed to load messages for session:', sessionId)
+              set({
+                currentSession: session,
+                messages: session.messages,
+              })
+            }
+          } catch (error) {
+            console.error('Error loading messages:', error)
+            set({
+              currentSession: session,
+              messages: session.messages,
+            })
+          }
         }
       },
 
@@ -116,19 +227,37 @@ export const useChatStore = create<ChatState>()(
         })
 
         // Save message to database
-        if (get().currentSession) {
-          fetch('/api/chat/messages', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              sessionId: get().currentSession!.id,
-              role: message.role,
-              content: message.content,
-              metadata: message.metadata,
-            }),
-          }).catch(error => {
-            console.error('Failed to save message:', error)
-          })
+        const currentSession = get().currentSession
+        if (currentSession && currentSession.id) {
+          const sessionId = currentSession.id
+          console.log('Saving message for session ID:', sessionId)
+
+          // Only save if sessionId is a valid UUID
+          if (sessionId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            fetch('/api/chat/messages', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sessionId: sessionId,
+                role: message.role,
+                content: message.content,
+                metadata: message.metadata,
+              }),
+            }).then(response => {
+              console.log('Message save response status:', response.status)
+              if (!response.ok) {
+                return response.text().then(text => {
+                  console.error('Message save error:', response.status, text)
+                })
+              }
+            }).catch(error => {
+              console.error('Failed to save message:', error)
+            })
+          } else {
+            console.error('Invalid session ID format:', sessionId)
+          }
+        } else {
+          console.error('No current session found when trying to save message')
         }
       },
 
@@ -150,6 +279,44 @@ export const useChatStore = create<ChatState>()(
           ),
         }))
       },
+
+      // Memory Context Actions
+      setUseMemoryContext: (use: boolean) => {
+        set({ useMemoryContext: use })
+      },
+
+      setMemorySourceTypes: (types: string[]) => {
+        set({ memorySourceTypes: types })
+      },
+
+      setSelectedSources: (sources: { documents: boolean; urls: boolean; notebook: boolean }) => {
+        set({ selectedSources: sources })
+      },
+
+      toggleMemorySourceType: (type: string) => {
+        set(state => ({
+          memorySourceTypes: state.memorySourceTypes.includes(type)
+            ? state.memorySourceTypes.filter(t => t !== type)
+            : [...state.memorySourceTypes, type]
+        }))
+      },
+
+      // Folder Selection Actions
+      setSelectedFolders: (folders: string[]) => {
+        set({ selectedFolders: folders })
+      },
+
+      toggleFolder: (folderId: string) => {
+        set(state => ({
+          selectedFolders: state.selectedFolders.includes(folderId)
+            ? state.selectedFolders.filter(id => id !== folderId)
+            : [...state.selectedFolders, folderId]
+        }))
+      },
+
+      clearSelectedFolders: () => {
+        set({ selectedFolders: [] })
+      }
     }),
     {
       name: 'chat-storage',
