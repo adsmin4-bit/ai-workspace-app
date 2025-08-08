@@ -27,6 +27,7 @@ export default function ChatInterface({ }: ChatInterfaceProps) {
     memorySourceTypes,
     selectedSources,
     selectedFolders,
+    enableMemory,
     createNewSession,
     loadSession,
     deleteSession,
@@ -39,7 +40,8 @@ export default function ChatInterface({ }: ChatInterfaceProps) {
     toggleMemorySourceType,
     setSelectedFolders,
     toggleFolder,
-    clearSelectedFolders
+    clearSelectedFolders,
+    setEnableMemory
   } = useChatStore()
 
   const [input, setInput] = useState('')
@@ -225,7 +227,8 @@ export default function ChatInterface({ }: ChatInterfaceProps) {
           memorySourceTypes,
           selectedFolders: selectedFolders,
           includeAllSources: includeAllSources,
-          selectedChatSources: selectedChatSources
+          selectedChatSources: selectedChatSources,
+          enableMemory: enableMemory
         })
       })
 
@@ -374,6 +377,58 @@ export default function ChatInterface({ }: ChatInterfaceProps) {
     </div>
   )
 
+  // Clear chat memory functions
+  const clearSessionMemory = async () => {
+    if (!currentSession?.id) {
+      toast.error('No active session to clear memory for')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/chat/memory/clear', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionId: currentSession.id
+        }),
+      })
+
+      if (response.ok) {
+        toast.success('Chat memory cleared for this session')
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to clear chat memory')
+      }
+    } catch (error) {
+      console.error('Error clearing session memory:', error)
+      toast.error('Failed to clear chat memory')
+    }
+  }
+
+  const clearAllMemory = async () => {
+    if (!confirm('Are you sure you want to clear ALL chat memory? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/chat/memory/clear', {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        toast.success('All chat memory cleared')
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to clear all chat memory')
+      }
+    } catch (error) {
+      console.error('Error clearing all memory:', error)
+      toast.error('Failed to clear all chat memory')
+    }
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -512,6 +567,51 @@ export default function ChatInterface({ }: ChatInterfaceProps) {
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
+
+            {/* Chat Memory Toggle */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Brain size={16} className="text-green-600" />
+                <span className="text-sm font-medium text-gray-700">Enable Chat Memory</span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={enableMemory}
+                  onChange={(e) => setEnableMemory(e.target.checked)}
+                  className="sr-only peer"
+                  aria-label="Enable chat memory"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+              </label>
+            </div>
+
+            {/* Chat Memory Controls */}
+            {enableMemory && (
+              <div className="bg-white p-3 rounded-lg border">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Chat Memory Controls</h4>
+                <div className="space-y-2">
+                  <button
+                    onClick={clearSessionMemory}
+                    disabled={!currentSession?.id}
+                    className="w-full px-3 py-2 bg-orange-100 text-orange-700 text-sm rounded-lg hover:bg-orange-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    <Trash2 size={14} />
+                    Clear Session Memory
+                  </button>
+                  <button
+                    onClick={clearAllMemory}
+                    className="w-full px-3 py-2 bg-red-100 text-red-700 text-sm rounded-lg hover:bg-red-200 flex items-center justify-center gap-2"
+                  >
+                    <Trash2 size={14} />
+                    Clear All Chat Memory
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Chat memory stores your conversations with embeddings for context-aware responses across sessions.
+                </p>
+              </div>
+            )}
 
             {/* Folder Selection */}
             {useMemoryContext && (

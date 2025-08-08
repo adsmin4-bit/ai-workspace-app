@@ -16,6 +16,7 @@ interface ChatState {
     notebook: boolean
   }
   selectedFolders: string[] // New: selected folders for RAG filtering
+  enableMemory: boolean // Chat memory toggle
 
   // Actions
   createNewSession: (title: string, systemPrompt?: string) => Promise<string>
@@ -37,6 +38,9 @@ interface ChatState {
   setSelectedFolders: (folders: string[]) => void
   toggleFolder: (folderId: string) => void
   clearSelectedFolders: () => void
+
+  // Chat Memory Actions
+  setEnableMemory: (enable: boolean) => void
 }
 
 export const useChatStore = create<ChatState>()(
@@ -55,6 +59,7 @@ export const useChatStore = create<ChatState>()(
         notebook: true
       },
       selectedFolders: [], // New: selected folders for RAG filtering
+      enableMemory: true, // Chat memory toggle (default: true)
 
       createNewSession: async (title: string, systemPrompt?: string) => {
         // Generate UUID for session ID using crypto.randomUUID()
@@ -316,6 +321,11 @@ export const useChatStore = create<ChatState>()(
 
       clearSelectedFolders: () => {
         set({ selectedFolders: [] })
+      },
+
+      // Chat Memory Actions
+      setEnableMemory: (enable: boolean) => {
+        set({ enableMemory: enable })
       }
     }),
     {

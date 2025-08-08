@@ -219,6 +219,17 @@ CREATE TABLE chat_sources (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create chat_memory table for persistent chat memory with RAG
+CREATE TABLE chat_memory (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id UUID REFERENCES chat_sessions(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    role VARCHAR(20) NOT NULL CHECK (role IN ('user', 'assistant')),
+    content TEXT NOT NULL,
+    embedding VECTOR(1536),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create indexes
 CREATE INDEX idx_messages_chat_session_id ON messages(chat_session_id);
 CREATE INDEX idx_messages_created_at ON messages(created_at);
@@ -268,6 +279,12 @@ CREATE INDEX idx_chat_sources_type ON chat_sources(type);
 CREATE INDEX idx_chat_sources_source_id ON chat_sources(source_id);
 CREATE INDEX idx_chat_sources_selected ON chat_sources(selected);
 CREATE INDEX idx_chat_sources_owner_id ON chat_sources(owner_id);
+
+-- Chat memory indexes
+CREATE INDEX idx_chat_memory_session_id ON chat_memory(session_id);
+CREATE INDEX idx_chat_memory_user_id ON chat_memory(user_id);
+CREATE INDEX idx_chat_memory_embedding ON chat_memory USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+CREATE INDEX idx_chat_memory_created_at ON chat_memory(created_at);
 
 -- Create function to update updated_at column
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -401,4 +418,85 @@ CREATE POLICY "Users can delete own summaries" ON summaries FOR DELETE USING (au
 CREATE POLICY "Users can view own chat sources" ON chat_sources FOR SELECT USING (auth.uid() = owner_id);
 CREATE POLICY "Users can insert own chat sources" ON chat_sources FOR INSERT WITH CHECK (auth.uid() = owner_id);
 CREATE POLICY "Users can update own chat sources" ON chat_sources FOR UPDATE USING (auth.uid() = owner_id);
-CREATE POLICY "Users can delete own chat sources" ON chat_sources FOR DELETE USING (auth.uid() = owner_id); 
+CREATE POLICY "Users can delete own chat sources" ON chat_sources FOR DELETE USING (auth.uid() = owner_id);
+
+-- Enable RLS on chat_memory table
+ALTER TABLE chat_memory ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies for chat_memory
+CREATE POLICY "Users can view own chat memory" ON chat_memory FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own chat memory" ON chat_memory FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own chat memory" ON chat_memory FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own chat memory" ON chat_memory FOR DELETE USING (auth.uid() = user_id);
+
+-- Create RPC function for context chunk similarity search
+CREATE OR REPLACE FUNCTION match_context_embeddings(
+  query_embedding vector(1536),
+  match_threshold float,
+  match_count int,
+  user_id uuid,
+  selected_chat_sources uuid[] DEFAULT NULL
+)
+RETURNS TABLE (
+  id uuid,
+  content text,
+  metadata jsonb,
+  context_weight integer,
+  similarity float
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    cc.id,
+    cc.content,
+    cc.metadata,
+    cc.context_weight,
+    1 - (cc.embedding <=> query_embedding) as similarity
+  FROM context_chunks cc
+  WHERE cc.owner_id = user_id
+    AND 1 - (cc.embedding <=> query_embedding) > match_threshold
+    AND (
+      selected_chat_sources IS NULL 
+      OR cc.metadata->>'source_id' = ANY(selected_chat_sources)
+    )
+  ORDER BY cc.embedding <=> query_embedding
+  LIMIT match_count;
+END;
+$$;
+
+-- Create RPC function for chat memory similarity search
+CREATE OR REPLACE FUNCTION match_chat_memory_embeddings(
+  query_embedding vector(1536),
+  match_threshold float,
+  match_count int,
+  user_id uuid
+)
+RETURNS TABLE (
+  id uuid,
+  session_id uuid,
+  role text,
+  content text,
+  created_at timestamptz,
+  similarity float
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    cm.id,
+    cm.session_id,
+    cm.role,
+    cm.content,
+    cm.created_at,
+    1 - (cm.embedding <=> query_embedding) as similarity
+  FROM chat_memory cm
+  WHERE cm.user_id = user_id
+    AND cm.embedding IS NOT NULL
+    AND 1 - (cm.embedding <=> query_embedding) > match_threshold
+  ORDER BY cm.embedding <=> query_embedding
+  LIMIT match_count;
+END;
+$$; 

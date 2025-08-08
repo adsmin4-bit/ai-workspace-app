@@ -594,6 +594,35 @@ export interface Database {
           updated_at?: string
         }
       }
+      chat_memory: {
+        Row: {
+          id: string // UUID
+          session_id: string // UUID
+          user_id: string // UUID
+          role: 'user' | 'assistant'
+          content: string
+          embedding: number[] | null
+          created_at: string
+        }
+        Insert: {
+          id?: string // UUID
+          session_id: string // UUID
+          user_id: string // UUID
+          role: 'user' | 'assistant'
+          content: string
+          embedding?: number[] | null
+          created_at?: string
+        }
+        Update: {
+          id?: string // UUID
+          session_id?: string // UUID
+          user_id?: string // UUID
+          role?: 'user' | 'assistant'
+          content?: string
+          embedding?: number[] | null
+          created_at?: string
+        }
+      }
     }
   }
 }
@@ -1249,31 +1278,88 @@ class DatabaseOperations {
 
   // Helper function to create chat source entry
   async createChatSourceForContent(type: 'document' | 'notebook' | 'url' | 'youtube', sourceId: string, name: string) {
-    try {
-      // Check if chat source already exists
-      const { data: existing } = await supabase
-        .from('chat_sources')
-        .select('id')
-        .eq('type', type)
-        .eq('source_id', sourceId)
-        .single()
-
-      if (existing) {
-        return existing
-      }
-
-      // Create new chat source
-      return await this.createChatSource({
+    const user = await this.getCurrentUser()
+    const { data, error } = await supabase
+      .from('chat_sources')
+      .insert({
         type,
         source_id: sourceId,
         name,
-        selected: true
+        selected: true,
+        owner_id: user.id
       })
-    } catch (error) {
-      console.error('Error creating chat source:', error)
-      // Don't throw error to avoid breaking the main operation
-      return null
-    }
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  }
+
+  // Chat Memory Operations
+  async saveChatMemory(sessionId: string, role: 'user' | 'assistant', content: string, embedding?: number[]) {
+    const user = await this.getCurrentUser()
+    const { data, error } = await supabase
+      .from('chat_memory')
+      .insert({
+        session_id: sessionId,
+        user_id: user.id,
+        role,
+        content,
+        embedding
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  }
+
+  async getChatMemory(sessionId: string, limit: number = 20) {
+    const { data, error } = await supabase
+      .from('chat_memory')
+      .select('*')
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: true })
+      .limit(limit)
+
+    if (error) throw error
+    return data
+  }
+
+  async searchChatMemory(queryEmbedding: number[], userId: string, limit: number = 15, threshold: number = 0.7) {
+    const { data, error } = await supabase
+      .rpc('match_chat_memory_embeddings', {
+        query_embedding: queryEmbedding,
+        match_threshold: threshold,
+        match_count: limit,
+        user_id: userId
+      })
+
+    if (error) throw error
+    return data || []
+  }
+
+  async clearChatMemory(sessionId: string) {
+    const user = await this.getCurrentUser()
+    const { error } = await supabase
+      .from('chat_memory')
+      .delete()
+      .eq('session_id', sessionId)
+      .eq('user_id', user.id)
+
+    if (error) throw error
+    return { success: true }
+  }
+
+  async clearAllChatMemory() {
+    const user = await this.getCurrentUser()
+    const { error } = await supabase
+      .from('chat_memory')
+      .delete()
+      .eq('user_id', user.id)
+
+    if (error) throw error
+    return { success: true }
   }
 }
 
